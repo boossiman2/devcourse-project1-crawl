@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import inspect
-from database import EngineConn
-from models import Base
+from app.database import EngineConn
+from app.models.models import Base
 
 # 데이터베이스 연결 설정
 engine = EngineConn().engine

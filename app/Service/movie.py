@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
-from schemas import *
-from models import *
-from database import EngineConn
+from app.database import EngineConn
+from app.schemas import schemas
+from app.models import models
+
 
 # engineconn 클래스 인스턴스를 생성하고 세션 팩토리를 가져옵니다.
 engine = EngineConn()
@@ -13,6 +14,12 @@ def get_movie(db: Session, movie_id: int):
 
 def get_movies(db: Session, skip: int = 0, limit: int = 50):
     return db.query(models.Movie).offset(skip).limit(limit).all()
+
+def get_movies_by_country_name(db: Session, country_name: str):
+    country = db.query(models.Country).filter(models.Country.name == country_name).first()
+    if not country:
+        raise "Error: get_movies_by_country_name, Not Exists Country"
+    return country.movies[:5]
 
 def create_movie(db: Session, movie: schemas.MovieSchema):
     db_movie = models.Movie(

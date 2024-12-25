@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movies in {{ country_name }}</title>
+    <style>
+        /* 전체 페이지 레이아웃을 Flexbox로 설정 */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+        }
+
+        .dropdown-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .dropdown {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .visualization-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px 0;
+        }
+
+        .visualization-section {
+            flex: 1;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            margin: 0 10px;
+        }
+
+        .movie-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .movie-container img {
+            width: 150px;
+            height: 200px;
+            object-fit: cover;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        /* 시각화 콘텐츠에 이미지 크기 맞추기 */
+        .visualization-section img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- 드롭다운 메뉴 -->
+    <div class="dropdown-container">
+        <select id="countryDropdown" class="dropdown" onchange="window.location.href='/api/movies/' + this.value">
+            <option value="South Korea" {% if country_name == "South Korea" %}selected{% endif %}>South Korea</option>
+            <option value="Brazil" {% if country_name == "Brazil" %}selected{% endif %}>Brazil</option>
+            <option value="United States" {% if country_name == "United States" %}selected{% endif %}>United States</option>
+            <option value="United Kingdom" {% if country_name == "United Kingdom" %}selected{% endif %}>United Kingdom</option>
+            <option value="Australia" {% if country_name == "Australia" %}selected{% endif %}>Australia</option>
+            <option value="South Africa" {% if country_name == "South Africa" %}selected{% endif %}>South Africa</option>
+        </select>
+    </div>
+
+    <h1>Top Movies in {{ country_name }}</h1>
+    <div class="movie-container">
+        {{ movie_cards | safe}}
+    </div>
+
+    <!-- 3분할 시각화 섹션 -->
+    <div class="visualization-container">
+        <div class="visualization-section">
+            <h1>Word Cloud</h1>
+            <img src="data:image/png;base64,{{ wordcloud_image }}" alt="Word Cloud">
+        </div>
+
+        <div class="visualization-section">
+            <h1>Genre Distribution</h1>
+            <img src="data:image/png;base64,{{ piechart_image }}" alt="Pie Chart">
+        </div>
+
+        <div class="visualization-section">
+            <h1>Average Rating</h1>
+            <p>Average Rating: {{ average_rating }}</p>
+            <div>{{ stars_svg|safe }}</div>
+        </div>
+    </div>
+</body>
+</html>

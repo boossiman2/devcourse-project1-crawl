@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Selector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+        }
+        .container h1 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .secondary-btn {
+            margin-top: 10px;
+            background-color: #6c757d;
+        }
+        .secondary-btn:hover {
+            background-color: #565e64;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Movie Selector</h1>
+        <select id="country-select">
+            <option value="South Korea">South Korea</option>
+            <option value="United States">United States</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="Australia">Australia</option>
+            <option value="Brazil">Brazil</option>
+            <option value="South Africa">South Africa</option>
+        </select>
+        <a id="view-movies-btn" class="btn">View Movies</a>
+        <a href="/api/crawl_movies/" class="btn secondary-btn">Crawl Movies</a>
+    </div>
+
+    <script>
+        document.getElementById("view-movies-btn").addEventListener("click", function() {
+            const countryName = document.getElementById("country-select").value;
+            const url = `/api/movies/${encodeURIComponent(countryName)}/`;
+            window.location.href = url;
+        });
+    </script>
+</body>
+</html>
