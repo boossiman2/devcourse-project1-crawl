@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import inspect
+
 from app.database import EngineConn
 from app.models.models import Base
 
@@ -20,10 +23,12 @@ async def lifespan(app: FastAPI):
 
 # FastAPI 애플리케이션 생성
 app = FastAPI(lifespan=lifespan)
+# 템플릿 디렉토리 설정
+templates = Jinja2Templates(directory='app/templates')
 
 # 루트 엔드포인트
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"message": "영화 API에 오신 것을 환영합니다!"}
+    return templates.TemplateResponse("home.html")
 
 # 영화, 배우, 장르 등의 라우트 설정

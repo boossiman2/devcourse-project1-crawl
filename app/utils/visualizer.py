@@ -16,7 +16,7 @@ from wordcloud import WordCloud
 from jinja2 import Environment, FileSystemLoader
 
 # 사용자 정의 모듈 (가정: 직접 정의한 함수나 데이터)
-from app.api.movie import get_movies_by_country_name
+from app.Service.movie import get_movies_by_country_name
 from constant import *
 
 class Visualizer:
