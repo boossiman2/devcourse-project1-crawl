@@ -1,6 +1,7 @@
+from typing import List
 from sqlalchemy.orm import Session
 from app.database import EngineConn
-from app.schemas import schemas
+from app.schemas import schemas, movie
 from app.models import models
 
 
@@ -38,6 +39,32 @@ def create_movie(db: Session, movie: schemas.MovieSchema):
     db_movie.actors = [db.query(models.Actor).get(actor.id) for actor in movie.actors]
     db.commit()
     return db_movie
+
+def bulk_insert_movies(db: Session, movies: List[schemas.MovieCreate]):
+    new_movies = []
+    for movie in movies:
+        db_movie = models.Movie(
+            title=movie.title,
+            release_year=movie.release_year,
+            score=movie.score,
+            summary=movie.summary,
+            image_url=movie.image_url
+        )
+        # Add relationships (genres and actors)
+        db_movie.genres = [
+            db.query(models.Genre).filter(models.Genre.name == genre.name).first() or models.Genre(name=genre.name)
+            for genre in movie.genres
+        ]
+        db_movie.actors = [
+            db.query(models.Actor).filter(models.Actor.name == actor.name).first() or models.Actor(name=actor.name)
+            for actor in movie.actors
+        ]
+        db.add(db_movie)
+        new_movies.append(db_movie)
+
+    db.commit()
+    return new_movies
+
 
 def update_movie(db: Session, movie: models.Movie, updated_movie: schemas.MovieSchema):
     for key, value in updated_movie.dict(exclude={"country", "genres", "actors"}).items():
