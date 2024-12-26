@@ -30,11 +30,10 @@ def fetch_movies_by_country(country_name: str, db: Session = Depends(get_db)):
         logger.error(f"Error fetching movies: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint to create a movie
-@router.post("/movies", response_model=schemas.MovieSchema)
-def create_new_movie(movie: schemas.MovieSchema, db: Session = Depends(get_db)):
+@router.post("/movies/bulk_insert", response_model=List[schemas.Movie])
+def bulk_insert_movies_api(movies: schemas.BulkInsertMovies, db: Session = Depends(get_db)):
     try:
-        return create_movie(db, movie)
+        inserted_movies = bulk_insert_movies(db, movies.movies)
+        return inserted_movies
     except Exception as e:
-        logger.error(f"Error creating movie: {e}")
         raise HTTPException(status_code=500, detail=str(e))
