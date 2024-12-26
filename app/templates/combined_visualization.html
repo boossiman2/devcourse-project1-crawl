@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movies in {{ country_name }}</title>
     <style>
-        /* 전체 페이지 레이아웃을 Flexbox로 설정 */
+        /* 기존 스타일 코드 유지 */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -69,7 +69,7 @@
 <body>
     <!-- 드롭다운 메뉴 -->
     <div class="dropdown-container">
-        <select id="countryDropdown" class="dropdown" onchange="window.location.href='/api/movies/' + this.value">
+        <select id="countryDropdown" class="dropdown" onchange="updateMovies(this.value)">
             <option value="South Korea" {% if country_name == "South Korea" %}selected{% endif %}>South Korea</option>
             <option value="Brazil" {% if country_name == "Brazil" %}selected{% endif %}>Brazil</option>
             <option value="United States" {% if country_name == "United States" %}selected{% endif %}>United States</option>
@@ -79,28 +79,35 @@
         </select>
     </div>
 
-    <h1>Top Movies in {{ country_name }}</h1>
-    <div class="movie-container">
-        {{ movie_cards | safe}}
+    <h1 id="pageTitle">Top Movies in <span id="countryName">{{ country_name }}</span></h1>
+    <div class="movie-container" id="movieCards">
+        {{ movie_cards | safe }}
     </div>
 
     <!-- 3분할 시각화 섹션 -->
     <div class="visualization-container">
         <div class="visualization-section">
             <h1>Word Cloud</h1>
-            <img src="data:image/png;base64,{{ wordcloud_image }}" alt="Word Cloud">
+            <img id="wordcloudImage" src="data:image/png;base64,{{ wordcloud_image }}" alt="Word Cloud">
         </div>
 
         <div class="visualization-section">
             <h1>Genre Distribution</h1>
-            <img src="data:image/png;base64,{{ piechart_image }}" alt="Pie Chart">
+            <img id="piechartImage" src="data:image/png;base64,{{ piechart_image }}" alt="Pie Chart">
         </div>
 
         <div class="visualization-section">
             <h1>Average Rating</h1>
-            <p>Average Rating: {{ average_rating }}</p>
-            <div>{{ stars_svg|safe }}</div>
+            <p id="averageRating">Average Rating: {{ average_rating }}</p>
+            <div id="starsSvg">{{ stars_svg | safe }}</div>
         </div>
     </div>
+
+    <script>
+        function updateMovies(countryName) {
+            // URL을 변경하여 페이지를 새로 로드하도록 함
+            window.location.href = `/movies/${countryName}/`;
+        }
+    </script>
 </body>
 </html>

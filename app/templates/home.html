@@ -71,13 +71,13 @@
             <option value="South Africa">South Africa</option>
         </select>
         <a id="view-movies-btn" class="btn">View Movies</a>
-        <a href="/api/crawl_movies/" class="btn secondary-btn">Crawl Movies</a>
+        <a href="/movies/crawl_movies/" class="btn secondary-btn">Crawl Movies</a>
     </div>
 
     <script>
         document.getElementById("view-movies-btn").addEventListener("click", function() {
             const countryName = document.getElementById("country-select").value;
-            const url = `/api/movies/${encodeURIComponent(countryName)}/`;
+            const url = `/movies/${encodeURIComponent(countryName)}/`;
             window.location.href = url;
         });
     </script>

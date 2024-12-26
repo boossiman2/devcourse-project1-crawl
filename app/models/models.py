@@ -33,6 +33,7 @@ class Movie(Base):
     country = relationship('Country', back_populates='movies')
     genres = relationship("Genre", secondary='movie_genre', back_populates='movies')
     actors = relationship("Actor", secondary='movie_actor', back_populates='movies')
+    rankings = relationship("Ranking", back_populates="movie")
 
 class MovieGenre(Base):
     __tablename__ = 'movie_genre'
@@ -52,7 +53,7 @@ class Ranking(Base):
     rank = Column(Integer)
 
     country = relationship('Country')
-    movie = relationship('Movie')
+    movie = relationship('Movie', back_populates="rankings")  # Movie와의 관계 추가
 
     def __str__(self):
         return f'{self.country.name} - {self.rank} - {self.movie.title}'

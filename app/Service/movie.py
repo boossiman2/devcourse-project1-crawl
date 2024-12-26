@@ -1,13 +1,15 @@
-from typing import List
+import os
+import json
+import logging
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from app.database import EngineConn
-from app.schemas import schemas, movie
+from sqlalchemy.exc import IntegrityError
+from app.schemas import movie
 from app.models import models
 
 
-# engineconn 클래스 인스턴스를 생성하고 세션 팩토리를 가져옵니다.
-engine = EngineConn()
-SessionLocal = engine.get_session
+logger = logging.getLogger(__name__)
+JSON_PATH = os.path.join('app', 'data', 'crawl', 'raw', 'movies_data_country.json')
 
 ############################ MOVIE ############################
 def get_movie(db: Session, movie_id: int):
@@ -19,143 +21,99 @@ def get_movies(db: Session, skip: int = 0, limit: int = 50):
 def get_movies_by_country_name(db: Session, country_name: str):
     country = db.query(models.Country).filter(models.Country.name == country_name).first()
     if not country:
-        raise "Error: get_movies_by_country_name, Not Exists Country"
+        bulk_insert_movies_from_json(db=db)
+        country = db.query(models.Country).filter(models.Country.name == country_name).first()
     return country.movies[:5]
 
-def create_movie(db: Session, movie: schemas.MovieSchema):
-    db_movie = models.Movie(
-        title=movie.title,
-        summary=movie.summary,
-        score=movie.score,
-        rank=movie.rank,
-        country_id=movie.country.id
-    )
-    db.add(db_movie)
-    db.commit()
-    db.refresh(db_movie)
-    
-    # Many-to-many relationships (genres and actors)
-    db_movie.genres = [db.query(models.Genre).get(genre.id) for genre in movie.genres]
-    db_movie.actors = [db.query(models.Actor).get(actor.id) for actor in movie.actors]
-    db.commit()
-    return db_movie
+def bulk_insert_movies_from_json(db: Session, json_path: str = JSON_PATH):
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        logger.debug(f"Loaded JSON data: {data}")
 
-def bulk_insert_movies(db: Session, movies: List[schemas.MovieCreate]):
-    new_movies = []
-    for movie in movies:
-        db_movie = models.Movie(
-            title=movie.title,
-            release_year=movie.release_year,
-            score=movie.score,
-            summary=movie.summary,
-            image_url=movie.image_url
-        )
-        # Add relationships (genres and actors)
-        db_movie.genres = [
-            db.query(models.Genre).filter(models.Genre.name == genre.name).first() or models.Genre(name=genre.name)
-            for genre in movie.genres
-        ]
-        db_movie.actors = [
-            db.query(models.Actor).filter(models.Actor.name == actor.name).first() or models.Actor(name=actor.name)
-            for actor in movie.actors
-        ]
-        db.add(db_movie)
-        new_movies.append(db_movie)
+        movies = data.get('movies', [])
+        if not movies:
+            logger.error('No movie data provided')
+            raise HTTPException(status_code=400, detail="No movie data provided in JSON file")
 
-    db.commit()
-    return new_movies
+        new_movies = []
 
+        for movie_data in movies:
+            movie_info = movie_data.get("movie", {})
+            if not movie_info:
+                logger.error("Movie data is incomplete or missing")
+                raise HTTPException(status_code=400, detail="Movie data is incomplete or missing")
 
-def update_movie(db: Session, movie: models.Movie, updated_movie: schemas.MovieSchema):
-    for key, value in updated_movie.dict(exclude={"country", "genres", "actors"}).items():
-        setattr(movie, key, value)
-    
-    # Update relationships
-    movie.country_id = updated_movie.country.id
-    movie.genres = [db.query(models.Genre).get(genre.id) for genre in updated_movie.genres]
-    movie.actors = [db.query(models.Actor).get(actor.id) for actor in updated_movie.actors]
-    db.commit()
-    db.refresh(movie)
-    return movie
+            # Create or fetch country
+            country_name = movie_data.get("country")
+            country = db.query(models.Country).filter(models.Country.name == country_name).first()
 
-def delete_movie(db: Session, movie: models.Movie):
+            # If country doesn't exist, add it to the DB
+            if not country:
+                country = models.Country(name=country_name)
+                db.add(country)
+                db.commit()  # Commit immediately to persist country
+                db.refresh(country)  # Ensure the country is fully committed
+
+            # Create or fetch genres
+            genres = []
+            for genre_name in movie_info.get("genres", []):
+                genre = db.query(models.Genre).filter(models.Genre.name == genre_name).first()
+                if not genre:
+                    genre = models.Genre(name=genre_name)
+                    db.add(genre)
+                    db.commit()  # Commit immediately to persist country
+                    db.refresh(genre)  # Ensure the country is fully committed
+
+                genres.append(genre)
+
+            # Create or fetch actors
+            actors = []
+            for actor_name in movie_info.get("actors", []):
+                actor = db.query(models.Actor).filter(models.Actor.name == actor_name).first()
+                if not actor:
+                    actor = models.Actor(name=actor_name)
+                    db.add(actor)
+                    db.commit()  # Commit immediately to persist country
+                    db.refresh(actor)  # Ensure the country is fully committed
+
+                actors.append(actor)
+            # score null 처리
+            score = movie_info.get('score', 0.0)
+            if not score or score == 'null':
+                score = 0
+            # Create movie
+            db_movie = models.Movie(
+                title=movie_info.get("title"),
+                release_year=movie_info.get("release_year"),
+                score=float(score),
+                summary=movie_info.get("summary"),
+                image_url=movie_info.get("image_url"),
+                country=country,
+                genres=genres,
+                actors=actors
+            )
+            db.add(db_movie)
+            new_movies.append(db_movie)
+
+        db.commit()  # Commit all changes at once after all movies are added
+        return {"message": "Movies successfully inserted", "count": len(new_movies)}
+
+    except FileNotFoundError:
+        logger.error("JSON file not found.")
+        raise HTTPException(status_code=404, detail="JSON file not found")
+    except json.JSONDecodeError:
+        logger.error("Error decoding JSON file.")
+        raise HTTPException(status_code=400, detail="Invalid JSON format")
+    except IntegrityError as e:
+        logger.error(f"IntegrityError: {e.orig}")
+        db.rollback()  # Rollback on integrity error
+        raise HTTPException(status_code=400, detail="Integrity error occurred while saving data.")
+    except Exception as e:
+        logger.error(f"Error saving movies: {e}")
+        db.rollback()  # Rollback on any other error
+        raise HTTPException(status_code=500, detail=f"Error saving movies: {str(e)}")
+
+def delete_movie(db: Session, movie: movie.Movie):
     db.delete(movie)
     db.commit()
-
-############################ ACTOR ############################
-def get_actor(db: Session, actor_id: int):
-    return db.query(models.Actor).filter(models.Actor.id == actor_id).first()
-
-def get_actors(db: Session, skip: int = 0, limit: int = 50):
-    return db.query(models.Actor).offset(skip).limit(limit).all()
-
-def create_actor(db: Session, actor: schemas.ActorSchema):
-    db_actor = models.Actor(name=actor.name)
-    db.add(db_actor)
-    db.commit()
-    db.refresh(db_actor)
-    return db_actor
-
-def update_actor(db: Session, actor: models.Actor, updated_actor: schemas.ActorSchema):
-    actor.name = updated_actor.name
-    db.commit()
-    db.refresh(actor)
-    return actor
-
-def delete_actor(db: Session, actor: models.Actor):
-    db.delete(actor)
-    db.commit()
-
-############################ GENRE ############################
-def get_genre(db: Session, genre_id: int):
-    return db.query(models.Genre).filter(models.Genre.id == genre_id).first()
-
-def get_genres(db: Session, skip: int = 0, limit: int = 50):
-    return db.query(models.Genre).offset(skip).limit(limit).all()
-
-def create_genre(db: Session, genre: schemas.GenreSchema):
-    db_genre = models.Genre(name=genre.name)
-    db.add(db_genre)
-    db.commit()
-    db.refresh(db_genre)
-    return db_genre
-
-def update_genre(db: Session, genre: models.Genre, updated_genre: schemas.GenreSchema):
-    genre.name = updated_genre.name
-    db.commit()
-    db.refresh(genre)
-    return genre
-
-def delete_genre(db: Session, genre: models.Genre):
-    db.delete(genre)
-    db.commit()
-
-############################ COUNTRY ############################
-def get_country(db: Session, country_id: int):
-    return db.query(models.Country).filter(models.Country.id == country_id).first()
-
-def get_countries(db: Session, skip: int = 0, limit: int = 50):
-    return db.query(models.Country).offset(skip).limit(limit).all()
-
-def create_country(db: Session, country: schemas.CountrySchema):
-    db_country = models.Country(name=country.name)
-    db.add(db_country)
-    db.commit()
-    db.refresh(db_country)
-    return db_country
-
-def update_country(db: Session, country: models.Country, updated_country: schemas.CountrySchema):
-    country.name = updated_country.name
-    db.commit()
-    db.refresh(country)
-    return country
-
-def delete_country(db: Session, country: models.Country):
-    db.delete(country)
-    db.commit()
-
-############################ ERROR CHECK ############################
-# 1. Relationships like genres and actors in `create_movie` must exist in the database; ensure they are pre-created.
-# 2. Updating or deleting relationships requires careful handling to avoid orphaned rows or integrity errors.
-# 3. Ensure proper error handling for `get` methods to handle non-existent IDs gracefully.
-# 4. Validate incoming schemas before processing to avoid unexpected runtime errors.

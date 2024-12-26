@@ -6,6 +6,7 @@ from sqlalchemy import inspect
 
 from app.database import EngineConn
 from app.models.models import Base
+from app.routers.routes import router
 
 # 데이터베이스 연결 설정
 engine = EngineConn().engine
@@ -21,8 +22,9 @@ async def lifespan(app: FastAPI):
     # 애플리케이션 종료 시 실행할 코드 (필요한 경우 추가)
     pass
 
-# FastAPI 애플리케이션 생성
+# FastAPI 애플리케이션 생성 및 router 등록
 app = FastAPI(lifespan=lifespan)
+app.include_router(router)
 # 템플릿 디렉토리 설정
 templates = Jinja2Templates(directory='app/templates')
 

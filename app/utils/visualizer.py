@@ -14,27 +14,32 @@ import matplotlib
 from PIL import Image
 from wordcloud import WordCloud
 from jinja2 import Environment, FileSystemLoader
+from sqlalchemy.orm import Session
 
 # 사용자 정의 모듈 (가정: 직접 정의한 함수나 데이터)
 from app.Service.movie import get_movies_by_country_name
-from constant import *
+from app.utils.constant import *
 
 class Visualizer:
     matplotlib.use('Agg')
-    def __init__(self, country_name: str, movies=None, mask_path: str = None, template_path: str = "app/templates/"):
+
+    def __init__(self, country_name: str, db: Session, template_path: str = "app/templates/"):
         self.country_name = country_name
-        self.movies = movies or get_movies_by_country_name(self.country_name)
+        self.movies = get_movies_by_country_name(db, self.country_name)  # 이미 SQLAlchemy 모델 객체 리스트
         self.mask_path = MASK_PATH
         self.env = Environment(loader=FileSystemLoader(template_path))
         self.template = self.env.get_template("combined_visualization.html")
 
     def visualize_TOPK(self, k: int = 5):
-        filtered_movies = [movie for movie in self.movies if 1 <= movie.get('rank', 0) <= k]
+        filtered_movies = [
+            movie for movie in self.movies
+            if any(ranking.rank <= k for ranking in movie.rankings)  # 'rankings'는 관계 설정을 의미
+        ]
         movie_cards = ''.join([self.create_movie_card(movie) for movie in filtered_movies])
         return movie_cards
 
     def visualize_wordcloud(self, colormap: str = "magma"):
-        text = " ".join(re.sub(r"[^\w\s]", "", movie["summary"]) for movie in self.movies)
+        text = " ".join(re.sub(r"[^\w\s]", "", movie.summary) for movie in self.movies)  # movie.summary로 접근
         mask_array = None
         if self.mask_path and os.path.exists(self.mask_path):
             mask_array = np.array(Image.open(self.mask_path).convert('L'))
@@ -57,7 +62,7 @@ class Visualizer:
         return img_base64
 
     def visualize_piechart(self, k: int = 8):
-        all_genres = [genre for movie in self.movies for genre in movie['genres']]
+        all_genres = [genre for movie in self.movies for genre in movie.genres]  # movie.genres로 접근
         genre_counts = Counter(all_genres)
         top_genres = dict(genre_counts.most_common(k))
 
@@ -78,7 +83,7 @@ class Visualizer:
         return img_base64
 
     def visualize_average_rating(self):
-        average_rating = round(mean([float(movie['score']) for movie in self.movies]),3)
+        average_rating = round(mean([float(movie.score) for movie in self.movies]), 3)  # movie.score로 접근
         stars_svg = self.display_svg_stars(average_rating)
         return average_rating, stars_svg
 
@@ -102,13 +107,13 @@ class Visualizer:
         self.save_html(rendered_html, filepath=output_file)
         return output_file
 
-    def create_movie_card(self, movie: dict):
-        stars_html = self.display_svg_stars(float(movie.get('score', 0)))
+    def create_movie_card(self, movie: 'Movie'):  # 'Movie'는 SQLAlchemy 모델
+        stars_html = self.display_svg_stars(float(movie.score))  # movie.score로 접근
         return f"""
         <div style="display:inline-block; text-align:center; margin:10px; width:200px;">
-            <img src="{movie.get('image', '')}" style="width:150px; height:200px; object-fit:cover; border:1px solid #ccc; border-radius:8px;">
-            <div style="margin-top:10px; font-weight:bold;">{movie.get('title', 'Unknown')}</div>
-            <div style="font-size:12px; color:gray;">{movie.get('release_year', 'N/A')}</div>
+            <img src="{movie.image_url}" style="width:150px; height:200px; object-fit:cover; border:1px solid #ccc; border-radius:8px;">
+            <div style="margin-top:10px; font-weight:bold;">{movie.title}</div>
+            <div style="font-size:12px; color:gray;">{movie.release_year}</div>
             <div style="margin-top:5px;">{stars_html}</div>
         </div>
         """
