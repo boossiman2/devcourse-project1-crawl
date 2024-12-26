@@ -133,11 +133,6 @@ class MovieCrawler:
         
         print(f"기본 국가 코드 파일이 {filepath}에 생성되었습니다.")
     
-    def initialize_driver(self):
-        """WebDriver 초기화"""
-        options = self.configure_chrome_options()
-        return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
     def scrape_modal_content(self, wait, base_xpath: str, relative_xpaths: dict) -> dict:
         """
         모달 창에서 콘텐츠를 추출하는 함수

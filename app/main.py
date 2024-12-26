@@ -31,7 +31,7 @@ templates = Jinja2Templates(directory='app/templates')
 def read_root(request: Request):
     return templates.TemplateResponse(
         "home.html",
-        {"request": request, "title": "Welcome to FastAPI"}
+        {"request": request, "title": "Welcome to Worldwide Movies"}
     )
 
 # 영화, 배우, 장르 등의 라우트 설정
