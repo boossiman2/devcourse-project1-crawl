@@ -6,9 +6,10 @@
 본 프로젝트의 목표는 기본적인 개발환경 구축과 간단한 서비스 제작을 통해 데이터 엔지니어가 되기 위해서 가장 기본이 되는 파이썬 프로그래밍 기본역량과 Git/Github 사용법을 쌓는 것입니다. 
 구체적인 기술로는 MySQL와 FastAPI을 사용합니다
 
-### 2. 프로젝트 개요
+### 2. 프로젝트 개요 및 사용 기술
 - **프로젝트 이름**: 국가별 선호 영화 시각화
 - **설명**: 국가별 영화 랭킹 데이터를 수집, 전처리, 시각화하여 플랫폼에 저장하고 프론트엔드로 시각적으로 표현하는 프로젝트.
+- **기술**: <code>FastAPI</code>, <code>MySQL</code>, <code>Selenium</code>, <code>matplotlib</code>, <code>wordcloud</code>
 - **목표**: 데이터를 효율적으로 관리하고 시각화하여 사용자에게 직관적인 인터페이스 제공.
 ![fasapi_1 drawio](https://github.com/user-attachments/assets/1675a720-760a-4884-8425-dbde4cd9b2e4)
 
